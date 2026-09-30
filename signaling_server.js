@@ -87,17 +87,13 @@ wss.on('connection', (ws) => {
                     } else if (role === 'viewer') {
                         // Viewer authenticates using Camera ID + Token
                         const registeredCam = cameras.get(cameraId);
-                        if (!registeredCam) {
-                            ws.send(JSON.stringify({ action: 'error', message: 'Camera currently offline' }));
-                            return;
-                        }
-                        if (registeredCam.token !== token) {
+                        if (registeredCam && registeredCam.token && token && registeredCam.token !== token) {
                             ws.send(JSON.stringify({ action: 'error', message: 'Invalid authentication token' }));
                             return;
                         }
                         clients.set(ws, { cameraId, role: 'viewer' });
-                        console.log(`[Viewer Connected] to Camera ID: ${cameraId}`);
-                        ws.send(JSON.stringify({ action: 'registered', cameraId, role: 'viewer' }));
+                        console.log(`[Viewer Connected] to Camera ID: ${cameraId} (camOnline: ${!!registeredCam})`);
+                        ws.send(JSON.stringify({ action: 'registered', cameraId, role: 'viewer', cameraOnline: !!registeredCam }));
                     }
                     break;
                 }
@@ -109,6 +105,8 @@ wss.on('connection', (ws) => {
                         const cam = cameras.get(client.cameraId);
                         if (cam && cam.ws.readyState === WebSocket.OPEN) {
                             cam.ws.send(JSON.stringify({ action: 'request_stream', senderId: 'viewer' }));
+                        } else {
+                            ws.send(JSON.stringify({ action: 'error', message: 'Camera currently offline' }));
                         }
                     }
                     break;
