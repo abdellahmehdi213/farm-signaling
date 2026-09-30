@@ -27,7 +27,10 @@ wss.on('connection', (ws) => {
 
     ws.on('message', (message, isBinary) => {
         // High-speed binary video streaming relay (Camera -> Viewer)
-        if (isBinary || (Buffer.isBuffer(message) && message.length > 4 && message[0] === 0 && message[1] === 0)) {
+        const firstByte = Buffer.isBuffer(message) ? message[0] : (typeof message === 'string' ? message.charCodeAt(0) : 0);
+        const isJson = firstByte === 0x7B || firstByte === 0x5B; // '{' or '['
+        
+        if (!isJson || isBinary) {
             const client = clients.get(ws);
             if (client && client.role === 'camera') {
                 const targetCameraId = client.cameraId;
