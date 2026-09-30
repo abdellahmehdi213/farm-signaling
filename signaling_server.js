@@ -25,7 +25,24 @@ const clients = new Map();
 wss.on('connection', (ws) => {
     console.log('[+] New WebSocket connection established');
 
-    ws.on('message', (message) => {
+    ws.on('message', (message, isBinary) => {
+        // High-speed binary video streaming relay (Camera -> Viewer)
+        if (isBinary || (Buffer.isBuffer(message) && message.length > 4 && message[0] === 0 && message[1] === 0)) {
+            const client = clients.get(ws);
+            if (client && client.role === 'camera') {
+                const targetCameraId = client.cameraId;
+                wss.clients.forEach((c) => {
+                    if (c !== ws && c.readyState === WebSocket.OPEN) {
+                        const info = clients.get(c);
+                        if (info && info.cameraId === targetCameraId && info.role === 'viewer') {
+                            c.send(message, { binary: true });
+                        }
+                    }
+                });
+            }
+            return;
+        }
+
         try {
             const data = JSON.parse(message.toString());
             const action = data.action;
