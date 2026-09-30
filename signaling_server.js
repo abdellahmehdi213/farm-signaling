@@ -10,17 +10,34 @@ const WebSocket = require('ws');
 const http = require('http');
 
 const PORT = process.env.PORT || 8443;
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'Farm Camera Signaling Server Active', timestamp: Date.now() }));
-});
-
-const wss = new WebSocket.Server({ server });
 
 // Map: cameraId -> { ws, token, role, metadata }
 const cameras = new Map();
 // Map: ws -> { cameraId, role }
 const clients = new Map();
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    const camList = [];
+    for (const [id, cam] of cameras.entries()) {
+        camList.push({ id, token: cam.token ? cam.token.substring(0, 8) + '...' : '', role: cam.role });
+    }
+    const clientList = [];
+    for (const [ws, info] of clients.entries()) {
+        clientList.push(info);
+    }
+    res.end(JSON.stringify({ 
+        status: 'Farm Camera Signaling Server Active', 
+        timestamp: Date.now(),
+        camerasCount: cameras.size,
+        cameras: camList,
+        clientsCount: clients.size,
+        clients: clientList
+    }, null, 2));
+});
+
+const wss = new WebSocket.Server({ server });
+
 
 wss.on('connection', (ws) => {
     console.log('[+] New WebSocket connection established');
