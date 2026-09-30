@@ -154,8 +154,22 @@ wss.on('connection', (ws) => {
                     break;
                 }
 
-                default:
-                    console.log(`[?] Unknown action: ${action}`);
+                case 'motion_alert': {
+                    const client = clients.get(ws);
+                    if (client) {
+                        console.log(`[Motion Alert] Relay from ${client.role} for camera ${client.cameraId}`);
+                        relayToPeer(client, ws, data);
+                    }
+                    break;
+                }
+
+                default: {
+                    const client = clients.get(ws);
+                    if (client) {
+                        relayToPeer(client, ws, data);
+                    }
+                    console.log(`[?] Relayed message action: ${action}`);
+                }
             }
         } catch (err) {
             console.error('[!] Error handling message:', err.message);
